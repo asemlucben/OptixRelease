@@ -42,6 +42,18 @@ jobs:
         with:
           file: './${{ github.event.repository.name }}.optix'
           data: Project.ProductVersion
+      - name: Add trailing zero
+        shell: bash
+        run: [[ ${{ steps.yaml-data.outputs.data }} != *".0" ]] && {{ steps.yaml-data.outputs.data }}="${{ steps.yaml-data.outputs.data }}.0"
+      - name: Replace dot in IDE version
+        uses: mad9000/actions-find-and-replace-string@3
+        with:
+          source: ${{ steps.yaml-data.outputs.data }} # this translates to ref/heads/main on the main branch, but can be any arbitrary string 
+          find: '.'                                   # we want to remove the dot from source 
+          replace: '_'                                # and replace it with a blank string (ie. removing it)
+      - name: Echo Optix version
+        shell: bash
+        run: echo ${{ steps.yaml-data.outputs.data }}
       - name: Zip Release
         uses: TheDoctor0/zip-release@0.6.2
         with:
