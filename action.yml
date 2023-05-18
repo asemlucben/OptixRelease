@@ -1,4 +1,3 @@
-
 # This is a basic workflow to help you get started with Actions
 name: Create Optix Release
 
@@ -44,16 +43,21 @@ jobs:
           data: Project.ProductVersion
       - name: Add trailing zero
         shell: bash
-        run: [[ ${{ steps.yaml-data.outputs.data }} != *".0" ]] && {{ steps.yaml-data.outputs.data }}="${{ steps.yaml-data.outputs.data }}.0"
+        run: |
+          if [[ ${{ steps.yaml-data.outputs.data }} != *".0" ]]; then
+            echo "OptixVersion=${{ steps.yaml-data.outputs.data }}.0" >> $GITHUB_ENV
+          else
+            echo "OptixVersion=${{ steps.yaml-data.outputs.data }}" >> $GITHUB_ENV
+          fi
       - name: Replace dot in IDE version
-        uses: mad9000/actions-find-and-replace-string@3
-        with:
-          source: ${{ steps.yaml-data.outputs.data }} # this translates to ref/heads/main on the main branch, but can be any arbitrary string 
-          find: '.'                                   # we want to remove the dot from source 
-          replace: '_'                                # and replace it with a blank string (ie. removing it)
+        shell: bash
+        run: |
+          original_variable="${{ env.OptixVersion }}"
+          modified_variable="${original_variable//./_}"
+          echo "OptixVersion=v$modified_variable" >> $GITHUB_ENV
       - name: Echo Optix version
         shell: bash
-        run: echo ${{ steps.yaml-data.outputs.data }}
+        run: echo $OptixVersion
       - name: Zip Release
         uses: TheDoctor0/zip-release@0.6.2
         with:
@@ -90,7 +94,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.current-time.outputs.formattedTime }}
-          release_name: Release ${{ steps.current-time.outputs.formattedTime }} - Optix ${{ steps.yaml-data.outputs.data }} - Branch ${{ steps.extract_branch.outputs.branch }}
+          release_name: Release ${{ steps.current-time.outputs.formattedTime }} - Optix ${{ env.OptixVersion }} - Branch ${{ steps.extract_branch.outputs.branch }}
           draft: false
           prerelease: false
       - name: Upload Release Asset
@@ -101,7 +105,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
           asset_path: ./Release-${{ steps.extract_branch.outputs.branch }}.zip
-          asset_name: ${{ github.event.repository.name }}-Optix${{ steps.yaml-data.outputs.data }}-${{ steps.extract_branch.outputs.branch }}.zip
+          asset_name: ${{ github.event.repository.name }}-Optix_${{ env.OptixVersion }}-${{ steps.extract_branch.outputs.branch }}.zip
           asset_content_type: application/zip
       - name: Delete old releases
         uses: dev-drprasad/delete-older-releases@v0.2.1
