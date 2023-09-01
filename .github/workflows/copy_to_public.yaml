@@ -1,0 +1,36 @@
+# This workflow copies the current repository to the public FT-Optix organization
+# Based on: https://github.com/andstor/copycat-action
+name: Sync Files to Public Repo
+
+on:
+  push:
+    branches:
+      - main # Adjust this to your main branch
+      - master
+  workflow_dispatch: # This allows manual triggering
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Extract branch name
+      shell: bash
+      run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+      id: extract_branch
+    - name: Copycat
+      uses: andstor/copycat-action@v3
+      with:
+        personal_token: ${{ secrets.GH_TOKEN }}
+        src_path: /.
+        dst_path: /.
+        dst_owner: 'FactoryTalk-Optix'
+        dst_repo_name: ${{ github.event.repository.name }}
+        dst_branch: ${{ steps.extract_branch.outputs.branch }}
+        src_branch: ${{ steps.extract_branch.outputs.branch }}
+        src_wiki: false
+        dst_wiki: false
+        clean: true
+        commit_message: ${{ github.event.head_commit.message }}
+        exclude: '.github/*'
+        username: ${{ secrets.GH_USER }}
+        email: ${{ secrets.GH_EMAIL }}
